@@ -1,0 +1,485 @@
+{% extends "admin/layout/layout.html" %}
+
+<!-- ============================================================== -->
+<!-- Start Page Content here -->
+<!-- ============================================================== -->
+{% block customCss %}
+
+
+{% endblock %}
+
+{% block content %}
+
+    <div class="dashboard-main-body" id="app" v-cloak>
+        <div class="card basic-data-table">
+            <div class="card-header">
+                <div class="card-header d-flex justify-content-between items-center">
+                        <h3 class="card-title mb-0 align-self-center">Categories List</h3>
+                    <div>
+                        <!-- Trigger button to open modal -->
+                        <button @click="toggleCreateModal" type="button"
+                                class="btn btn-primary-600 radius-8 px-20 py-11"
+                                data-bs-toggle="modal" data-bs-target="#categoryModal">
+                            Create
+                        </button>
+
+                        <!-- Modal -->
+                        <Transition name="slide-up" @before-enter="beforeEnter" @enter="enter" @leave="leave">
+                            <div v-if="isModalOpen" @click.self="toggleModal" v-cloak
+                                 class="position-fixed top-0 start-0 w-100 z-3 h-100 d-flex align-items-center justify-content-center">
+                                <div class="mt-4">
+                                    <div class="card shadow-lg">
+                                        <div class="card-body">
+
+                                            <form @submit.prevent="submitForm">
+                                                <div class="mb-3">
+                                                    <label for="categoryName" class="form-label">Category Name</label>
+                                                    <input v-model="form.categoryName" type="text" id="categoryName"
+                                                           class="form-control">
+                                                    <div v-cloak
+                                                         v-if="v$.form.categoryName.$invalid && v$.form.categoryName.$dirty"
+                                                         class="text-danger">
+                                                        [[ v$.form.categoryName.$errors[0].$message ]]
+                                                    </div>
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <label for="description" class="form-label">Description</label>
+                                                    <textarea v-model="form.description" class="form-control"
+                                                              id="description" rows="5"></textarea>
+                                                    <div v-cloak
+                                                         v-if="v$.form.description.$invalid && v$.form.description.$dirty"
+                                                         class="text-danger">
+                                                        [[ v$.form.description.$errors[0].$message ]]
+                                                    </div>
+                                                </div>
+
+                                                <div class="mb-3 text-center">
+                                                    <button type="submit" class="btn btn-primary w-100">
+                                                        [[ isEditing ? 'Update Category' : 'Create Category' ]]
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Modal backdrop -->
+                            <div class="modal-backdrop fade" v-show="isModalOpen" @click="toggleModal"></div>
+                        </Transition>
+                    </div>
+
+                </div>
+
+                <!-- Product Table -->
+                <div class="card basic-data-table">
+                    <div class="card-body">
+                        <div id="dataTable_wrapper" class="dt-container dt-empty-footer">
+                            <div class="dt-layout-row">
+                                <div class="dt-layout-cell dt-start">
+                                    <div class="dt-length">
+                                        <select name="dataTable_length" aria-controls="dataTable" class="dt-input"
+                                                id="dt-length-0">
+                                            <option value="10">10</option>
+                                            <option value="25">25</option>
+                                            <option value="50">50</option>
+                                            <option value="100">100</option>
+                                        </select>
+                                        <label for="dt-length-0"> entries per page</label>
+                                    </div>
+                                </div>
+                                <div class="dt-layout-cell dt-end">
+                                    <div class="dt-search">
+                                        <label for="dt-search-0">Search:</label>
+                                        <input type="search" class="dt-input" id="dt-search-0" v-model="keyword"
+                                               @input="fetchCategories" placeholder="Type a keyword..."
+                                               aria-controls="dataTable">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div v-show="categories.length > 0 && !loading" class="dt-layout-row dt-layout-table">
+                                <div class="dt-layout-cell">
+                                    <table class="table bordered-table mb-0 dataTable" id="dataTable"
+                                           data-page-length="10" aria-describedby="dataTable_info">
+                                        <colgroup>
+                                            <col data-dt-column="0" style="width: 100px;">
+                                            <col data-dt-column="1" style="width: 150px;">
+                                            <col data-dt-column="2" style="width: 200px;">
+                                            <col data-dt-column="3" style="width: 150px;">
+                                        </colgroup>
+                                        <thead>
+                                        <tr>
+                                            <th scope="col">Id</th>
+                                            <th scope="col">Category Name</th>
+                                            <th scope="col">Description</th>
+                                            <th scope="col">Action</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        <tr v-for="category in categories" :key="category.id">
+                                            <td>[[ category.id ]]</td>
+                                            <td>[[ category.name ]]</td>
+                                            <td>[[ category.description ]]</td>
+                                            <td>
+                                                <a href="javascript:void(0)" @click="editCategory(category)"
+                                                   class="w-32-px h-32-px bg-success-focus text-success-main rounded-circle d-inline-flex align-items-center justify-content-center">
+                                                    <iconify-icon icon="lucide:edit"></iconify-icon>
+                                                </a>
+                                                <a href="javascript:void(0)" @click="deleteCategory(category.id)"
+                                                   class="w-32-px h-32-px bg-danger-focus text-danger-main rounded-circle d-inline-flex align-items-center justify-content-center">
+                                                    <iconify-icon icon="mingcute:delete-2-line"></iconify-icon>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Pagination and Info -->
+                            <div class="dt-layout-row">
+                                <div class="dt-layout-cell dt-start">
+                                    <div class="dt-info" aria-live="polite" id="dataTable_info" role="status">
+                                        Showing 1 to 10 of [[ categories.length ]] entries
+                                    </div>
+                                </div>
+                                <div class="dt-layout-cell dt-end">
+                                    <div class="dt-paging paging_full_numbers">
+                                        <!-- DataTable pagination buttons -->
+                                        <button class="dt-paging-button disabled first" aria-disabled="true">«</button>
+                                        <button class="dt-paging-button disabled previous" aria-disabled="true">‹
+                                        </button>
+                                        <button class="dt-paging-button current">1</button>
+                                        <button class="dt-paging-button">2</button>
+                                        <button class="dt-paging-button next" aria-label="Next">›</button>
+                                        <button class="dt-paging-button last" aria-label="Last">»</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+{% endblock %}
+
+{% block customJs %}
+    <!-- Include Vue.js -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue-demi"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@vuelidate/core"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@vuelidate/validators"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="{{ url_for('static', filename='admin/assets/libs/gridjs/gridjs.umd.js') }}"></script>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    {#    <script src="{{ url_for('static', filename='admin/assets/js/app.js') }}"></script>#}
+
+
+
+
+    <script>
+        const {createApp} = Vue;
+        const {useVuelidate} = Vuelidate;
+        const {required, minLength, maxLength, qty, helpers} = VuelidateValidators;
+
+        createApp({
+            delimiters: ['[[', ']]'], // Change the default delimiters
+            data() {
+                return {
+                    isModalOpen: false, // Modal starts closed
+                    message: "working",
+                    categories: [],
+                    loading: false,
+                    form: {
+                        id: null,
+                        categoryName: '',
+                        description: ''
+                    },
+                    currentPage: 1,
+                    itemsPerPage: 10,
+                    totalCategories: 0,
+                    totalPages: 0,
+                    pages: [],
+                    keyword: "",
+                    isEditing: false, // Set this to true when editing an existing category
+                    categoryId: null,
+                };
+            },
+            validations() {
+                return {
+                    form: {
+                        categoryName: {
+                            required: helpers.withMessage("Name is required", required),
+                        },
+                        description: {
+                            required: helpers.withMessage("Description is required", required),
+                        }
+                    }
+                };
+            },
+            setup() {
+                return {
+                    v$: useVuelidate(),
+                };
+            },
+            mounted() {
+                this.fetchCategories()
+            },
+            methods: {
+                fetchCategories() {
+                    this.loading = true;
+                    axios.get(`/api/get/categories`, {
+                        params: {
+                            page: this.currentPage,       // Current page for pagination
+                            limit: this.itemsPerPage,     // Number of items per page
+                            keyword: this.keyword, // Keyword for search (trimmed to remove extra spaces)
+                        }
+                    }).then(response => {
+                        this.loading = false;
+                        this.categories = response.data.categories;
+                        this.totalCategories = response.data.totalCount;
+                        this.totalPages = response.data.totalPages;
+                        this.pages = response.data.pages; // Get the page numbers (e.g., [3, 4, 5, 6, 7])
+
+                        // Update pagination buttons dynamically
+                        this.updatePagination();
+                    })
+                        .catch(error => {
+                            this.loading = false;
+                            console.error('Error fetching categories:', error);
+                        });
+                },
+
+                // Method to handle page change (click on page number or next/previous)
+                goToPage(page) {
+                    if (page > 0 && page <= this.totalPages) {
+                        this.currentPage = page;
+                        this.fetchCategories(); // Fetch categories for the selected page
+                    }
+                },
+
+                // Method to update the pagination buttons dynamically
+                updatePagination() {
+                    const paginationButtons = document.querySelector('.gridjs-pages');
+                    paginationButtons.innerHTML = '';  // Clear previous buttons
+
+                    // Create Previous button
+                    const prevButton = document.createElement('button');
+                    prevButton.textContent = 'Previous';
+                    prevButton.disabled = this.currentPage === 1;
+                    prevButton.addEventListener('click', () => this.goToPage(this.currentPage - 1));
+                    paginationButtons.appendChild(prevButton);
+
+                    // Create page number buttons (show 5 pages)
+                    this.pages.forEach(page => {
+                        const pageButton = document.createElement('button');
+                        pageButton.setAttribute('aria-label', `Page ${page}`);
+                        pageButton.textContent = page;
+                        pageButton.addEventListener('click', () => this.goToPage(page));
+
+                        // Highlight the current page
+                        if (page === this.currentPage) {
+                            pageButton.classList.add('gridjs-currentPage');
+                        }
+
+                        paginationButtons.appendChild(pageButton);
+                    });
+
+                    // Create Next button
+                    const nextButton = document.createElement('button');
+                    nextButton.textContent = 'Next';
+                    nextButton.disabled = this.currentPage === this.totalPages;
+                    nextButton.addEventListener('click', () => this.goToPage(this.currentPage + 1));
+                    paginationButtons.appendChild(nextButton);
+                },
+
+
+                submitForm() {
+                    this.v$.$touch(); // Mark all fields as touched
+                    if (this.v$.$invalid) {
+                        console.error("Validation errors present");
+                        return; // Stop submission if form is invalid
+                    }
+                    if (this.isEditing) {
+                        this.updateCategory(this.form.id); // Update the existing category
+                    } else {
+                        this.createCategory(); // Create a new category
+                    }
+                },
+                createCategory() {
+                    this.loading = true;// Assuming the backend sends users data as an array
+                    axios.post('/api/add/category', this.form, {
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    }).then(response => {
+                            if (response.status >= 200 && response.status < 300) {
+                                // Handle the success case
+                                this.clearForm();
+                                {#this.toggleModal();#}
+                                this.showSuccessAlert("Success", "Category added successfully", "success"); // Call this function when you want to trigger the alert
+                                this.fetchCategories(); // Refresh categories
+                                this.loading = false; // Hide loading indicator
+                                console.log('Category added successfully:', response.data);
+                            } else {
+                                // Handle the error case (non-2xx status)
+                                this.loading = false;
+                                console.error('Error adding category:', response.data);
+                            }
+                        }
+                    )
+                        .catch(error => {
+                            this.loading = false;// Assuming the backend sends users data as an array
+                            console.error('Error adding categories:', error);
+                        });                    // Add your submission logic here
+                },
+                editCategory(category) {
+                    this.form.categoryName = category.name;  // Pre-fill the name
+                    this.form.description = category.description;  // Pre-fill the description
+                    this.form.id = category.id;  // Store the category ID for submitting the update
+                    this.isEditing = true;
+                    this.toggleModal();
+                },
+                updateCategory(id) {
+                    axios.put(`/api/update/category/${id}`, this.form, {
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    }).then(response => {
+                        if (response.status >= 200 && response.status < 300) {
+                            this.clearForm();
+                            this.toggleModal();
+                            this.showSuccessAlert("Success", "Category updated successfully", "success");
+                            this.fetchCategories();
+                            console.log('Category updated successfully:', response.data);
+                        } else {
+                            console.error('Error updating category:', response.data);
+                        }
+                    })
+                },
+                deleteCategory(id) {
+                    // Show SweetAlert confirmation modal
+                    Swal.fire({
+                        title: 'Are you sure?',
+                        text: 'You won\'t be able to revert this!',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#3085d6',
+                        cancelButtonColor: '#d33',
+                        confirmButtonText: 'Yes, delete it!',
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Proceed with deletion if the user confirmed
+                            axios.delete(`/api/delete/category/${id}`).then(response => {
+                                if (response.status >= 200 && response.status < 300) {
+                                    // Show success message
+                                    Swal.fire(
+                                        'Deleted!',
+                                        'Your category has been deleted.',
+                                        'success'
+                                    );
+                                    this.fetchCategories();  // Refresh categories list after deletion
+                                    console.log('Category deleted successfully:', response.data);
+                                } else {
+                                    console.error('Error deleting category:', response.data);
+                                }
+                            }).catch(error => {
+                                console.error('Error deleting category:', error);
+                                Swal.fire(
+                                    'Error!',
+                                    'There was an issue deleting the category.',
+                                    'error'
+                                );
+                            });
+                        }
+                    });
+                },
+
+                clearForm() {
+                    this.form.categoryName = '';
+                    this.form.description = '';
+                    this.isEditing = false;
+                    this.v$.$reset(); // Reset form to its initial state
+                },
+
+
+                showSuccessAlert(title, text, icon) {
+                    Swal.fire({
+                        title: title,
+                        text: text,
+                        icon: icon,
+                        showCloseButton: true
+                    });
+                },
+                changePage(page) {
+                    if (page < 1 || page > Math.ceil(this.totalCategories / this.itemsPerPage)) return;
+                    this.currentPage = page;
+                    this.fetchCategories();  // Re-fetch categories for the new page
+                },
+                toggleModal() {
+                    this.isModalOpen = !this.isModalOpen; // Toggles modal open/close
+                },
+                toggleCreateModal() {
+                    this.clearForm();
+                    this.isModalOpen = !this.isModalOpen; // Toggles modal open/close
+                }
+                ,
+                beforeEnter(el) {
+                    // Set the modal off-canvas initially at the bottom (down)
+                    el.style.transform = 'translateY(100%)'; // Start from below the screen
+                    el.style.opacity = 0; // Make the modal invisible
+                }
+                ,
+                enter(el, done) {
+                    // Trigger reflow to ensure the transition happens
+                    el.offsetHeight; // This is necessary to trigger the CSS transition
+
+                    // Now, animate the modal from the bottom (translateY(100%)) to the center (translateY(0))
+                    el.style.transition = 'transform 0.5s ease-out, opacity 0.5s ease-out';
+                    el.style.transform = 'translateY(0)'; // Move the modal to the center
+                    el.style.opacity = 1; // Fade in the modal
+
+                    done(); // Transition is done
+                }
+                ,
+                leave(el, done) {
+                    // Transition the modal upwards (off-screen)
+                    el.style.transition = 'transform 0.5s ease-in, opacity 0.5s ease-in';
+                    el.style.transform = 'translateY(-100%)'; // Move the modal off the screen upwards
+                    el.style.opacity = 0; // Fade out the modal
+
+                    // Delay the removal from the DOM until the animation is complete
+                    setTimeout(() => {
+                        done(); // Call done after the transition is complete
+                    }, 500); // Match the duration of the transition (500ms)
+                }
+            }
+        }).mount('#app');
+
+    </script>
+
+    <style scoped>
+        /* Modal transition styles inside Vue component */
+        .modal-enter-active,
+        .modal-leave-active {
+            transition: transform 0.5s ease-out, opacity 0.5s ease-out;
+        }
+
+        .modal-enter, .modal-leave-to /* .modal-leave-active in <2.1.8 */
+        {
+            transform: translateY(100%); /* Start below the screen */
+            opacity: 0; /* Start as invisible */
+        }
+
+        .modal-leave {
+            transform: translateY(-100%); /* Move off the screen upwards */
+            opacity: 0; /* Fade out */
+        }
+    </style>
+{% endblock %}

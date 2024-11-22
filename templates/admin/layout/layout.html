@@ -1,0 +1,58 @@
+<!-- meta tags and other links -->
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wowdash - Bootstrap 5 Admin Dashboard HTML Template</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='admin/assets/images/favicon.png') }}"
+          sizes="16x16">
+
+    {% include 'admin/layout/styles.html' %}
+
+    {% block customCss %}
+
+    {% endblock %}
+
+</head>
+
+<body>
+
+{% include 'admin/layout/sidebar-menu.html' %}
+
+
+<main class="dashboard-main">
+    {% include 'admin/layout/topbar-menu.html' %}
+
+    <!-- Menu -->
+    <!-- Sidenav Menu End  -->
+
+
+    <!-- ============================================================== -->
+    <!-- Start Page Content here -->
+    <!-- ============================================================== -->
+
+    {% block content %}
+    {% endblock %}
+
+    <!-- Footer Start -->
+    {% include 'admin/layout/footer.html' %}
+    <!-- Footer End -->
+
+
+    <!-- ============================================================== -->
+    <!-- End Page content -->
+    <!-- ============================================================== -->
+
+</main>
+
+{% block customJs %}
+
+{% endblock %}
+
+{% include 'admin/layout/scripts.html' %}
+
+
+</body>
+
+</html>
