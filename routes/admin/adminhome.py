@@ -1,7 +1,6 @@
 from flask import redirect, url_for, render_template
 from app import app
 
-@app.route('/')
 @app.route('/admin')
 def admin():
     # Redirect to the /admin/dashboard route
